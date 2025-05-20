@@ -1,0 +1,60 @@
+name: Django CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    services:
+      redis:
+        image: redis
+        ports:
+          - 6379:6379
+
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: vitor
+          POSTGRES_PASSWORD: vitor
+          POSTGRES_DB: vitor_news
+          
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgres://vitor:vitor@localhost:5432/vitor_news
+      SECRET_KEY: dummy-secret-key
+      DEBUG: "False"
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python3 -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run migrations
+      run: |
+        python3 manage.py migrate
+
+    - name: Run tests
+      run: |
+        python3 manage.py test news.tests
+        

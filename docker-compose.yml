@@ -1,0 +1,67 @@
+services:
+  backend:
+    build: 
+      context: ./patient-blood-tracker/backend
+      dockerfile: Dockerfile
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./patient-blood-tracker/backend:/app
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - mongodb
+      - redis
+
+  frontend:
+    build:
+      context: ./patient-blood-tracker/frontend
+      dockerfile: Dockerfile
+    volumes:
+      - ./patient-blood-tracker/frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+
+  celery:
+    build: 
+      context: ./patient-blood-tracker/backend
+      dockerfile: Dockerfile
+    command: celery -A app.worker worker --loglevel=info
+    volumes:
+      - ./patient-blood-tracker/backend:/app
+    depends_on:
+      - backend
+      - redis
+
+  celery-beat:
+    build: 
+      context: ./patient-blood-tracker/backend
+      dockerfile: Dockerfile
+    command: celery -A app.worker beat --loglevel=info
+    volumes:
+      - ./patient-blood-tracker/backend:/app
+    depends_on:
+      - backend
+      - redis
+
+volumes:
+  mongodb_data:

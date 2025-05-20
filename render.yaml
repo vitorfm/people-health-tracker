@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: vitor-news-api
+    env: python
+    plan: free
+    branch: main
+    buildCommand: |
+      pip install -r requirements.txt
+      python manage.py collectstatic --noinput --clear
+      cp -r /opt/render/project/src/.venv/lib/python3.11/site-packages/drf_yasg/static/drf-yasg/ /opt/render/project/src/static/drf-yasg/
+      python manage.py migrate
+    startCommand: gunicorn vitor_news.wsgi:application --bind 0.0.0.0:$PORT
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        value: sua-chave-secreta
+      - key: DJANGO_SETTINGS_MODULE
+        value: vitor_news.settings
+      - key: DJANGO_ALLOWED_HOSTS
+        value: vitor-news-api.onrender.com
+      - key: DATABASE_URL
+        fromDatabase:
+          name: nome-do-seu-banco-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: nome-do-seu-redis
+          property: connectionString
